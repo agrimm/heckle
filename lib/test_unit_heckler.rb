@@ -19,6 +19,7 @@ class TestUnitHeckler < Heckle
   @@test_pattern = 'test/test_*.rb'
   @@tests_loaded = false
   @@focus = false
+  @@test_runner_mediator = nil
 
   def self.test_pattern=(value)
     @@test_pattern = value
@@ -103,16 +104,36 @@ class TestUnitHeckler < Heckle
     self.class.load_test_files unless @@tests_loaded
   end
 
+  #Current thoughts:
+  ## It doesn't print how many tests failed or their error messages
+  ## The test runner mediator is only created once. Are there any downsides for this?
+
   include ZenTestMapping
 
   def tests_pass?
+    if @@test_runner_mediator.nil?
+      require "test/unit/collector/objectspace"
+
+      obj_sp = Test::Unit::Collector::ObjectSpace.new
+      test_suite = obj_sp.collect
+
+      require "test/unit/ui/testrunnermediator"
+
+      @@test_runner_mediator =  Test::Unit::UI::TestRunnerMediator.new(test_suite)
+      @@test_runner_mediator.add_listener(Test::Unit::TestResult::FAULT) {throw :stop_test_runner}
+    end
+
     silence_stream do
       if @@focus and @method_name then
         name = normal_to_test @method_name.to_s
         ARGV.clear
         ARGV << "--name=/#{name}/"
       end
-      result = Test::Unit::AutoRunner.run
+      result = false
+      catch (:stop_test_runner) do
+        result = @@test_runner_mediator.run_suite
+      end
+
       ARGV.clear
       result
     end
