@@ -196,6 +196,11 @@ class TestHeckle < HeckleTestCase
     @heckler.reset_mutatees
     assert_equal original_mutatees, @heckler.mutatees
   end
+
+  def test_current_code
+    skip "assert nothing tested. Should Heckle#current_code be Ruby2Ruby.new.process current_tree ?"
+    @heckler.current_code
+  end
 end
 
 class LiteralHeckleTestCase < HeckleTestCase
